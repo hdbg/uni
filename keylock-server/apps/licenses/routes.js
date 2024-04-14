@@ -276,7 +276,7 @@ router.post("/check", async (req, resp) => {
     type: "pkcs8",
   });
 
-  const signature_body = `${req.body.app_name}:${req.body.license_holder}:${req.body.machine_hwid}:${license.valid_until}:${req.body.nonce}`;
+  const signature_body = `${req.body.app_name}:${req.body.license_holder}:${req.body.machine_hwid}:${req.body.nonce}`;
 
   const signature = createSign("sha256");
 
