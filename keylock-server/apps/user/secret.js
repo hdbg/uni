@@ -1,1 +1,1 @@
-module.exports.signature_secret = proccess.env.SIGNATURE_SECRET;
+module.exports.signature_secret = process.env.SIGNATURE_SECRET;
