@@ -38,7 +38,7 @@ router.post("/create", async (req, resp) => {
   }
 
   if (await app_dao.exists(req.body.name)) {
-    return resp.status(400).json({ errors: { msg: "App already exists" } });
+    return resp.status(400).json({ errors: { msg: "App already exists", code: "DUPLICATE_APP"  } });
   }
 
   const { _, privateKey } = await generate_rsa_key(2048);

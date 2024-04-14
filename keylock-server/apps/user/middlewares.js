@@ -11,7 +11,7 @@ const enforce_user_auth = async function (req, resp, next) {
   if (token == null) {
     return resp
       .status(401)
-      .json({ errors: { msg: "Authorization header is missing" } });
+      .json({ errors: { msg: "Authorization header is missing", code: "TOKEN_MISSING" } });
   }
 
   try {
@@ -22,7 +22,7 @@ const enforce_user_auth = async function (req, resp, next) {
     const bail = () => {
       return resp
         .status(403)
-        .json({ errors: { msg: "Authorization header is invalid" } });
+        .json({ errors: { msg: "Authorization header is invalid", code: "INVALID_TOKEN" } });
     };
 
     if (user == null) {
@@ -46,7 +46,7 @@ const enforce_user_auth = async function (req, resp, next) {
     }
     return resp
       .status(403)
-      .json({ errors: { msg: "Authorization header is invalid" } });
+      .json({ errors: { msg: "Authorization header is invalid", code: "INVALID_TOKEN" } });
   }
   next();
 };
@@ -56,7 +56,7 @@ const enforce_permissioned_user = async function (req, resp, next) {
     if ([Permissions.Root, Permissions.Developer].includes(req.user.role)) {
       next();
     } else {
-      return resp.status(403).json({ errors: { msg: "Permission denied" } });
+      return resp.status(403).json({ errors: { msg: "Permission denied", code: "ACCESS_DENIED" } });
     }
   });
 };
