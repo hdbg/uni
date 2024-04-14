@@ -2,7 +2,8 @@ const express = require("express");
 const moment = require("moment");
 const { user_dao, Permissions } = require("../../libraries/dao");
 
-const TEMP_SECRET = "TEST_SECRET";
+const { signature_secret } = require("./secret");
+
 var jwt = require("jsonwebtoken");
 
 const enforce_user_auth = async function (req, resp, next) {
@@ -11,18 +12,28 @@ const enforce_user_auth = async function (req, resp, next) {
   if (token == null) {
     return resp
       .status(401)
-      .json({ errors: { msg: "Authorization header is missing", code: "TOKEN_MISSING" } });
+      .json({
+        errors: {
+          msg: "Authorization header is missing",
+          code: "TOKEN_MISSING",
+        },
+      });
   }
 
   try {
-    var decoded = jwt.verify(token, TEMP_SECRET);
+    var decoded = jwt.verify(token, signature_secret);
 
     const user = await user_dao.find_by_username(decoded.username);
 
     const bail = () => {
       return resp
         .status(403)
-        .json({ errors: { msg: "Authorization header is invalid", code: "INVALID_TOKEN" } });
+        .json({
+          errors: {
+            msg: "Authorization header is invalid",
+            code: "INVALID_TOKEN",
+          },
+        });
     };
 
     if (user == null) {
@@ -46,7 +57,12 @@ const enforce_user_auth = async function (req, resp, next) {
     }
     return resp
       .status(403)
-      .json({ errors: { msg: "Authorization header is invalid", code: "INVALID_TOKEN" } });
+      .json({
+        errors: {
+          msg: "Authorization header is invalid",
+          code: "INVALID_TOKEN",
+        },
+      });
   }
   next();
 };
@@ -56,7 +72,9 @@ const enforce_permissioned_user = async function (req, resp, next) {
     if ([Permissions.Root, Permissions.Developer].includes(req.user.role)) {
       next();
     } else {
-      return resp.status(403).json({ errors: { msg: "Permission denied", code: "ACCESS_DENIED" } });
+      return resp
+        .status(403)
+        .json({ errors: { msg: "Permission denied", code: "ACCESS_DENIED" } });
     }
   });
 };

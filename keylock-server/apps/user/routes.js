@@ -1,5 +1,5 @@
 const express = require("express");
-const moment = require("moment")
+const moment = require("moment");
 const logger = require("../../libraries/logger");
 
 const { user_dao, Permissions } = require("../../libraries/dao");
@@ -7,7 +7,7 @@ const { user_dao, Permissions } = require("../../libraries/dao");
 const router = express.Router();
 const schemas = require("./schemas");
 
-const TEMP_SECRET = "TEST_SECRET";
+const { signature_secret } = require("./secret");
 var jwt = require("jsonwebtoken");
 
 router.post("/auth", async (req, resp) => {
@@ -20,9 +20,10 @@ router.post("/auth", async (req, resp) => {
   const user = await user_dao.find_by_username(req.body.username);
 
   if (user == null) {
-    return resp.status(400).json({ errors: { msg: "User not found" } });
+    return resp
+      .status(400)
+      .json({ errors: { msg: "User not found", code: "USER_NOT_FOUND" } });
   }
-
 
   const current_password = user_dao.hash_password(req.body.password);
 
@@ -32,7 +33,11 @@ router.post("/auth", async (req, resp) => {
       reject_reason: "invalid_password",
       username: user.username,
     });
-    return resp.status(400).json({ errors: { msg: "Invalid password" } });
+    return resp
+      .status(400)
+      .json({
+        errors: { msg: "Invalid password", code: "USER_INVALID_PASSWORD" },
+      });
   }
 
   logger.info({ event: "user.auth", username: user.username });
@@ -42,21 +47,23 @@ router.post("/auth", async (req, resp) => {
   const expiration = moment().add(1, "hour").toDate();
 
   const new_auth_token = jwt.sign(
-    { username: user.username, role: user.role, exp: Math.floor(expiration / 1000) },
-    TEMP_SECRET,// should move to const
+    {
+      username: user.username,
+      role: user.role,
+      exp: Math.floor(expiration / 1000),
+    },
+    signature_secret // should move to const
   );
 
   await user_dao.add_token(user.username, new_auth_token, expiration);
 
   // should emit token here
-  return resp
-    .status(200)
-    .json({
-      status: "ok",
-      data: {
-        token: new_auth_token,
-      },
-    });
+  return resp.status(200).json({
+    status: "ok",
+    data: {
+      token: new_auth_token,
+    },
+  });
 });
 
 router.post("/register", async (req, resp) => {
@@ -69,15 +76,21 @@ router.post("/register", async (req, resp) => {
   if (is_user_already_exist) {
     return resp
       .status(400)
-      .json({ errors: { msg: "User already registered" } });
+      .json({
+        errors: { msg: "User already registered", code: "NAME_OCCUPIED" },
+      });
   }
 
   // better safe than sorry!
   if (req.body.role == Permissions.Root) {
-    return resp.status(403).json({ errors: { msg: "Can't register as root" } });
+    return resp
+      .status(403)
+      .json({
+        errors: { msg: "Can't register as root", code: "ACCESS_DENIED" },
+      });
   }
 
-  console.log(user_dao.hash_password(req.body.password),);
+  console.log(user_dao.hash_password(req.body.password));
   const new_user = await user_dao.register(
     req.body.username,
     user_dao.hash_password(req.body.password),
