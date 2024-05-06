@@ -81,4 +81,22 @@ router.get("/public_key", async (req, resp) => {
     .json({ status: "ok", data: { public_key: public_key } });
 });
 
+router.get("/list", async (req, resp) => {
+  var app = await app_dao.get_all_applications(req.user.username);
+
+  app = app.map((app) => {
+    const public_key = createPublicKey(app.secret_key).export({
+      type: "spki",
+      format: "pem",
+    });
+    return {
+      name: app.name,
+      public_key: public_key,
+    };
+  });
+  return resp
+    .status(200)
+    .json({ status: "ok", data: app });
+});
+
 module.exports = router;

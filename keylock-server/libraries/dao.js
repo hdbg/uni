@@ -101,6 +101,12 @@ class ApplicationDAO {
 
     return application;
   }
+
+  async get_all_applications(owner_username) {
+    const owner = await user_dao.find_by_username(owner_username);
+    const applications = await models.Application.find({ owner: owner }).exec();
+    return applications;
+  }
 }
 
 const app_dao = new ApplicationDAO();
@@ -143,7 +149,7 @@ class LicenseDAO {
     }
 
     async get_all_application_licenses(application) {
-        const licenses = await models.License.find({ application: application }).exec();
+        const licenses = await models.License.find({ application: application }).populate("holder").exec();
         return licenses;
     }
 
@@ -151,9 +157,7 @@ class LicenseDAO {
         const holder = await user_dao.find_by_username(holder_username);
         const application = await app_dao.find_by_name(application_name);
 
-        console.log(valid_until);
 
-        console.log(machine_hwid);
 
         const license = new models.License({
             holder: holder,
@@ -195,7 +199,7 @@ class LicenseDAO {
 
 
         console.log(`holder: ${holder}, application: ${application}`);
-        const license = await models.License.findOne({ holder: holder, application: application }).exec();
+        const license = await models.License.findOne({ holder: holder, application: application }).populate("holder").exec();
 
         return license;
     }

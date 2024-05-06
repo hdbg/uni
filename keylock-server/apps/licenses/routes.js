@@ -18,6 +18,43 @@ const schemas = require("./schemas");
 
 router.use(enforce_user_auth);
 
+router.get("/info/:app/:holder", async (req, resp) => {
+  const app = await app_dao.find_by_name(req.params.app);
+
+  if (app == null) {
+    return resp.status(400).json({ errors: { msg: "App not found" } });
+  }
+
+  if (app.owner != req.user.id) {
+    return resp.status(403).json({ errors: { msg: "Permission denied" } });
+  }
+
+  const user = await user_dao.find_by_username(req.params.holder);
+
+  if (user == null) {
+    return resp.status(400).json({ errors: { msg: "User not found" } });
+  }
+
+  const license = await license_dao.get_user_license_for_application(
+    user.username,
+    app.name
+  );
+
+  if (license == null) {
+    return resp.status(400).json({ errors: { msg: "License not found" } });
+  }
+
+  return resp.status(200).json({
+    status: "ok",
+    data: {
+      holder: license.holder.username,
+      machine_hwid: license.machine.hwid,
+      valid_until: license.valid_until,
+      status: license.status,
+    },
+  });
+});
+
 // more or less moderation
 router.post("/grant", async (req, resp) => {
   if (req.user.role != "DEV" && req.user.role != "ROOT") {
@@ -26,7 +63,9 @@ router.post("/grant", async (req, resp) => {
       reject_reason: "permission_denied",
       username: req.user.username,
     });
-    return resp.status(403).json({ errors: { msg: "Permission denied", code: "ACCESS_DENIED" } });
+    return resp
+      .status(403)
+      .json({ errors: { msg: "Permission denied", code: "ACCESS_DENIED" } });
   }
 
   const valid = schemas.validate_grant_license(req.body);
@@ -40,7 +79,9 @@ router.post("/grant", async (req, resp) => {
   const app = await app_dao.find_by_name(req.body.application);
 
   if (app == null) {
-    return resp.status(400).json({ errors: { msg: "App not found", code: "APP_NOT_FOUND" } });
+    return resp
+      .status(400)
+      .json({ errors: { msg: "App not found", code: "APP_NOT_FOUND" } });
   }
 
   if (app.owner != req.user.id) {
@@ -52,19 +93,27 @@ router.post("/grant", async (req, resp) => {
       owner: app.owner,
       requester: req.user,
     });
-    return resp.status(403).json({ errors: { msg: "Permission denied", code: "ACCESS_DENIED" } });
+    return resp
+      .status(403)
+      .json({ errors: { msg: "Permission denied", code: "ACCESS_DENIED" } });
   }
 
   const user = await user_dao.find_by_username(req.body.holder);
 
   if (user == null) {
-    return resp.status(400).json({ errors: { msg: "User not found", code: "USER_NOT_FOUND" } });
+    return resp
+      .status(400)
+      .json({ errors: { msg: "User not found", code: "USER_NOT_FOUND" } });
   }
 
   const valid_until = moment(req.body.valid_until);
 
   if (!valid_until.isValid() || valid_until.isBefore(moment())) {
-    return resp.status(400).json({ errors: { msg: "Invalid expiration", code: "INVALID_TIMESTAMP" } });
+    return resp
+      .status(400)
+      .json({
+        errors: { msg: "Invalid expiration", code: "INVALID_TIMESTAMP" },
+      });
   }
 
   await license_dao.grant_license(
@@ -90,7 +139,9 @@ router.post("/extend", async (req, resp) => {
       reject_reason: "permission_denied",
       username: req.user.username,
     });
-    return resp.status(403).json({ errors: { msg: "Permission denied", code: "ACCESS_DENIED" } });
+    return resp
+      .status(403)
+      .json({ errors: { msg: "Permission denied", code: "ACCESS_DENIED" } });
   }
 
   const valid = schemas.validate_extend_license(req.body);
@@ -104,26 +155,40 @@ router.post("/extend", async (req, resp) => {
   const app = await app_dao.find_by_name(req.body.application);
 
   if (app == null) {
-    return resp.status(400).json({ errors: { msg: "App not found", code: "APP_NOT_FOUND" } });
+    return resp
+      .status(400)
+      .json({ errors: { msg: "App not found", code: "APP_NOT_FOUND" } });
   }
 
   if (app.owner != req.user.id) {
-    return resp.status(403).json({ errors: { msg: "Permission denied", code: "ACCESS_DENIED" } });
+    return resp
+      .status(403)
+      .json({ errors: { msg: "Permission denied", code: "ACCESS_DENIED" } });
   }
 
   const is_user_exists = await user_dao.exists(req.body.holder);
-  if (!is_user_exists ) {
-    return resp.status(400).json({ errors: { msg: "User not found", code: "USER_NOT_FOUND" } });
+  if (!is_user_exists) {
+    return resp
+      .status(400)
+      .json({ errors: { msg: "User not found", code: "USER_NOT_FOUND" } });
   }
 
   if (!license_dao.is_user_license_exists(req.body.holder, app.name)) {
-    return resp.status(400).json({ errors: { msg: "License not found", code: "LICENSE_NOT_FOUND" } });
+    return resp
+      .status(400)
+      .json({
+        errors: { msg: "License not found", code: "LICENSE_NOT_FOUND" },
+      });
   }
 
   const new_expiration = moment(req.body.valid_until);
 
   if (!new_expiration.isValid() || new_expiration.isBefore(moment())) {
-    return resp.status(400).json({ errors: { msg: "Invalid expiration", code: "INVALID_TIMESTAMP" } });
+    return resp
+      .status(400)
+      .json({
+        errors: { msg: "Invalid expiration", code: "INVALID_TIMESTAMP" },
+      });
   }
 
   await license_dao.extend_license(
@@ -148,7 +213,9 @@ router.post("/revoke", async (req, resp) => {
       reject_reason: "permission_denied",
       username: req.user.username,
     });
-    return resp.status(403).json({ errors: { msg: "Permission denied", code: "ACCESS_DENIED" } });
+    return resp
+      .status(403)
+      .json({ errors: { msg: "Permission denied", code: "ACCESS_DENIED" } });
   }
 
   const valid = schemas.validate_revoke_license(req.body);
@@ -177,13 +244,13 @@ router.post("/revoke", async (req, resp) => {
 
   await license_dao.revoke_license(req.body.holder, app.name);
 
-    logger.info({
-        event: "license.revoke",
-        app: app.name,
-        user: req.body.holder,
-    });
+  logger.info({
+    event: "license.revoke",
+    app: app.name,
+    user: req.body.holder,
+  });
 
-    return resp.status(200).json({ status: "ok" });
+  return resp.status(200).json({ status: "ok" });
 });
 
 // User-facing method
@@ -287,6 +354,31 @@ router.post("/check", async (req, resp) => {
   return resp
     .status(200)
     .json({ status: "granted", signature: sign_crypto.toString("base64") });
+});
+
+router.get("/list/:app", async (req, resp) => {
+  const app = await app_dao.find_by_name(req.params.app);
+
+  if (app == null) {
+    return resp.status(400).json({ errors: { msg: "App not found" } });
+  }
+
+  if (app.owner != req.user.id) {
+    return resp.status(403).json({ errors: { msg: "Permission denied" } });
+  }
+
+  const licenses = await license_dao.get_all_application_licenses(app);
+
+  const license = licenses.map((license) => {
+    return {
+      holder: license.holder.username,
+      machine_hwid: license.machine.hwid,
+      valid_until: license.valid_until,
+      status: license.status,
+    };
+  });
+
+  return resp.status(200).json({ status: "ok", data: license });
 });
 
 module.exports = router;

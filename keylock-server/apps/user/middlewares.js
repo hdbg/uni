@@ -21,9 +21,11 @@ const enforce_user_auth = async function (req, resp, next) {
   }
 
   try {
-    var decoded = jwt.verify(token, signature_secret);
+    var decoded = jwt.verify(token, signature_secret, {ignoreExpiration: true});
 
-    const user = await user_dao.find_by_username(decoded.username);
+    var user = await user_dao.find_by_username(decoded.username);
+
+    decoded = jwt.verify(token, signature_secret);
 
     const bail = () => {
       return resp

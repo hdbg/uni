@@ -10,7 +10,7 @@ const schemas = require("./schemas");
 const { signature_secret } = require("./secret");
 var jwt = require("jsonwebtoken");
 
-router.post("/auth", async (req, resp) => {
+async function authorize(req, resp) {
   const valid = schemas.validate_auth(req.body);
 
   if (!valid) {
@@ -64,7 +64,9 @@ router.post("/auth", async (req, resp) => {
       token: new_auth_token,
     },
   });
-});
+}
+
+router.post("/auth", authorize);
 
 router.post("/register", async (req, resp) => {
   const valid = schemas.validate_register(req.body);
@@ -99,9 +101,13 @@ router.post("/register", async (req, resp) => {
 
   logger.info({ event: "user.registered", username: new_user.username });
 
-  return resp
-    .status(200)
-    .json({ status: "ok", data: { username: new_user.username } });
+  return authorize(req, resp);
+});
+
+router.get("/exists/:username", async (req, resp) => {
+  const exists = await user_dao.exists(req.params.username);
+
+  return resp.status(200).json({ data: {exists: exists} });
 });
 
 module.exports = router;
